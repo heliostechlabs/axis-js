@@ -56,8 +56,6 @@ async function run() {
       .update(jwe)
       .final();
 
-    const encodedToken = jws;
-
     const encodedToken = await JWS.compact(jws);
 
     // Make HTTP request
@@ -76,4 +74,3 @@ async function run() {
 }
 
 run();
-

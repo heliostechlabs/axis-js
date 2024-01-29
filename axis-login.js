@@ -69,7 +69,7 @@ async function run() {
     // Adjust SSL/TLS options
     const agent = new https.Agent({
       rejectUnauthorized: false, // Temporary workaround, do not use in production
-      secureProtocol: 'TLSv1_2_method', // Adjust based on server requirements
+      secureProtocol: 'TLSv1_1_method', // Adjust based on server requirements
       ciphers: 'ALL', // Add more secure cipher suites if needed
     });
 

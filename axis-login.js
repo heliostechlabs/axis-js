@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { JWE, JWK, JWS, util } = require('node-jose');
+const { JWE, JWK, JWS } = require('node-jose');
 const https = require('https');
 
 // Define the data to be encoded
@@ -70,6 +70,7 @@ async function run() {
     const agent = new https.Agent({
       rejectUnauthorized: false, // Temporary workaround, do not use in production
       secureProtocol: 'TLSv1_2_method', // Adjust based on server requirements
+      ciphers: 'ALL', // Add more secure cipher suites if needed
     });
 
     const response = await axios.post(url, encodedToken, { headers, httpsAgent: agent });

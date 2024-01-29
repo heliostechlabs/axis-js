@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { JWE, JWK, JWS, util } = require('node-jose');
+const https = require('https');
 
 // Define the data to be encoded
 const dataToEncode = {
@@ -10,8 +11,8 @@ const dataToEncode = {
   Risks: {},
 };
 
-const privateKeyPem = 
-  `-----BEGIN PRIVATE KEY-----
+const privateKeyPem = `
+-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC/8Vjz1glMyPv0
 YsGyo27lufueO47Ba1Oa9zIMN3J57MLUf0dIcGLPYSMA290ktFkCrUdj0XJE3yPq
 Ba2QHMsM83zbi02FQ+HcIRoCio0xeY1olV0FCQy3JcSjcqdJmuR8JMEX8Dt7p0vw
@@ -31,7 +32,9 @@ o/KiHseYk63d4jw8hz7oALpoFmUJA8o+eZEW2/kPc40DyElTe8nDC5Jeb0VvbN+p
 pobPxsWXDJIYYtAMYEGAvCOqhLMnyQb9ldBZ06zaXVDpMdXtYhZmD9rDPxkE/FNx
 V9tCREx2mwKBgQDEF+sGcZWVEu8KFRGsIBJwXy6cGB6HEYsXhUgn/T383ZvOPEZJ
 pbeYRQ1f7YiMyoPlISOaWSB581tRUet2RQweQv54diyluwp00mu17Wz+I4hI1rM1
-kOY74vsuVK46xoCmnyjjO1VDAgUqwa9ZWc091o6xXhtbQeh8GBej+nMrcwKBgBZf
+kOY74vsuVK46xoCmnyjjO
+
+1VDAgUqwa9ZWc091o6xXhtbQeh8GBej+nMrcwKBgBZf
 i31YT3AyD2iTd6SmCnCwwo86xmZtwmMoAuUejyTlpg8GFOzjAXanEre+Vn3nj4IQ
 2/dQWj4ZW2udz09rOprlSidooQTIFXN+pBNah3ES585D7vUoRxJS9dPe977eWbtp
 qXelZPcYOQDx9uhe+o1aLt2A1LkFNlVahYEAUku/AoGAa5HC1Xqa5RlWyDbvLyKj
@@ -64,7 +67,13 @@ async function run() {
       // Add any other required headers here
     };
 
-    const response = await axios.post(url, encodedToken, { headers });
+    // Adjust SSL/TLS options
+    const agent = new https.Agent({
+      rejectUnauthorized: false, // Temporary workaround, do not use in production
+      secureProtocol: 'TLSv1_2_method', // Adjust based on server requirements
+    });
+
+    const response = await axios.post(url, encodedToken, { headers, httpsAgent: agent });
 
     console.log('API Response:', response.data);
   } catch (error) {

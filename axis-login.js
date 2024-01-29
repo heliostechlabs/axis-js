@@ -58,6 +58,8 @@ async function run() {
 
     const encodedToken = jws;
 
+    const encodedToken = await JWS.compact(jws);
+
     // Make HTTP request
     const url = 'https://sakshamuat.axisbank.co.in/gateway/api/v2/CRMNext/login';
     const headers = {

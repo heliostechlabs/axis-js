@@ -9,7 +9,7 @@ async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   const cek = randomBytes(32); // Adjust the key size according to your requirements
 
   const jwe = await jose.JWE.createEncrypt(
-    { format: 'compact', fields: { alg, enc: contentKeyEncMethod } },
+    { format: 'general', fields: { alg, enc: contentKeyEncMethod } },
     jwk,
     payload
   );

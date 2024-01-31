@@ -1,17 +1,74 @@
-const axios = require('axios');
-const { JWE, JWK, JWS } = require('node-jose');
-const https = require('https');
+const jose = require('node-jose');
+const fs = require('fs');
 
-// Define the data to be encoded
-const dataToEncode = {
-  Data: {
-    userName: 'alwebuser',
-    password: 'acid_qa',
-  },
-  Risks: {},
-};
+async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
+  const keyStore = jose.JWK.createKeyStore();
+  const jwk = await keyStore.add(publicKey, 'pem');
+  const cek = await jose.JWA.generateCEK(contentKeyEncMethod);
+  
+  const jwe = await jose.JWE.createEncrypt({ format: 'compact', fields: { alg, enc: contentKeyEncMethod } }, jwk, payload);
+  await jwe.update(cek);
+  
+  const jweString = await jwe.final();
+  return jweString;
+}
 
-const privateKeyPem = `
+async function jweDecrypt(privateKey, jweEncryptedPayload) {
+  const keyStore = jose.JWK.createKeyStore();
+  const jwk = await keyStore.add(privateKey, 'pem');
+  
+  const jwe = await jose.JWE.createDecrypt(jwk, { format: 'compact' }, jweEncryptedPayload);
+  const decryptedValue = await jwe.final();
+  
+  return decryptedValue;
+}
+
+async function jwsSign(privateKey, payloadToSign) {
+  const keyStore = jose.JWK.createKeyStore();
+  const jwk = await keyStore.add(privateKey, 'pem');
+  
+  const jws = await jose.JWS.createSign({ format: 'compact' }, jwk, payloadToSign);
+  const jwsString = await jws.final();
+  
+  return jwsString;
+}
+
+async function jwsSignatureVerify(publicKey, signedPayloadToVerify) {
+  const keyStore = jose.JWK.createKeyStore();
+  const jwk = await keyStore.add(publicKey, 'pem');
+  
+  const jws = await jose.JWS.createVerify(jwk, { format: 'compact' }, signedPayloadToVerify);
+  const verifiedPayload = await jws.verify(signedPayloadToVerify);
+  
+  return { signatureValid: true, payloadAfterVerification: verifiedPayload.payload };
+}
+
+async function jweEncryptAndSign(publicKeyToEncrypt, privateKeyToSign, payloadToEncryptAndSign) {
+  const alg = 'RSA-OAEP-256';
+  const enc = 'A256GCM';
+  
+  const encryptedResult = await jweEncrypt(alg, enc, publicKeyToEncrypt, payloadToEncryptAndSign);
+  const signedResult = await jwsSign(privateKeyToSign, encryptedResult);
+  
+  return signedResult;
+}
+
+async function jweVerifyAndDecrypt(publicKeyToVerify, privateKeyToDecrypt, payloadToVerifyAndDecrypt) {
+  const jwVerifyObject = await jwsSignatureVerify(publicKeyToVerify, payloadToVerifyAndDecrypt);
+
+  if (!jwVerifyObject.signatureValid) {
+    return null;
+  } else {
+    return await jweDecrypt(privateKeyToDecrypt, jwVerifyObject.payloadAfterVerification);
+  }
+}
+
+function readKeyFromFile(filePath) {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+// Replace the file paths with the actual private and public key files
+const privateKeyString = `
 -----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC/8Vjz1glMyPv0
 YsGyo27lufueO47Ba1Oa9zIMN3J57MLUf0dIcGLPYSMA290ktFkCrUdj0XJE3yPq
@@ -41,44 +98,32 @@ IT2zNA2+3CCemJGpoy7W5vceBDHumc4fm2V1KsFllHVmZaVolKAyAzVVqp0/L4Ts
 rwT93M7Rh8W8gvuN497C+Tg=
 -----END PRIVATE KEY-----
 `;
+const publicKeyString  = "-----BEGIN CERTIFICATE-----\n"
++ "MIIEZzCCAs+gAwIBAgIIRkJL3X2j2skwDQYJKoZIhvcNAQELBQAwcTELMAkGA1UE\n"
++ "BhMCSU4xCzAJBgNVBAgMAk1IMQ8wDQYDVQQHDAZNdW5iYWkxDTALBgNVBAoMBEF4\n"
++ "aXMxEjAQBgNVBAsMCUF4aXMgQmFuazEhMB8GA1UEAwwYcmd3Lmp3ZWp3cy51YXQu\n"
++ "YXhpc2IuY29tMB4XDTIzMDEwMzA1MzM0MloXDTI4MDEwMjA1MzM0MlowcTELMAkG\n"
++ "A1UEBhMCSU4xCzAJBgNVBAgMAk1IMQ8wDQYDVQQHDAZNdW5iYWkxDTALBgNVBAoM\n"
++ "BEF4aXMxEjAQBgNVBAsMCUF4aXMgQmFuazEhMB8GA1UEAwwYcmd3Lmp3ZWp3cy51\n"
++ "YXQuYXhpc2IuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQEALxNfMn7gVCJQgNxJ\n"
++ "2iwXnw41ZM8BZf/iwIKrMkeFZcnqnxSwTpGxKAaRy3ExkyGBVmJQuGIEIjCGJfqp\n"
++ "2SUNcr1UsFuy5kljiePR2TtjTZa4WwQ7RYFP9tk6u+0r7aVLk/jzfDx+ZHYjNjvy\n"
++ "6TpFkMJB0fASwboRHxlv0TDpO66E0cEpJpfrkI7MEZSf6DTam+qn4OFUiqspG2ooc\n"
++ "lf9l9hIg4QeRJegWhPJvcqSpAnasLyhHLpTfgZFetVDNwwCYqu4XEb2fyySOy/WgG\n"
++ "cz7fOU4mO1HxQ84TURjWhCbEmiAVHGY3y5Mc1tKgEupSvUGSSO2SlL9EXngunkv4\n"
++ "cLTw==\n"
++ "-----END CERTIFICATE-----";
 
-async function run() {
+// Example usage
+(async () => {
   try {
-    // Create JWE
-    const keystore = JWK.createKeyStore();
-    const privateKey = await keystore.add(privateKeyPem, 'pem', { kid: 'key-id' });
-    const jwe = await JWE.createEncrypt({ format: 'compact' }, privateKey)
-      .update(JSON.stringify(dataToEncode))
-      .final();
+    const payload = 'alwebuser';
+    const encryptedAndSigned = await jweEncryptAndSign(publicKeyString, privateKeyString, payload);
+    console.log('Encrypted and Signed:', encryptedAndSigned);
 
-    // Create JWS
-    const key = await JWK.asKey(privateKey);
-    const jws = await JWS.createSign({ fields: { alg: 'RS256' } }, key)
-      .update(jwe)
-      .final();
-
-    const encodedToken = jws;
-
-    // Make HTTP request
-    const url = 'https://sakshamuat.axisbank.co.in/gateway/api/v2/CRMNext/login';
-    const headers = {
-      'Content-Type': 'application/json',
-      // Add any other required headers here
-    };
-
-    // Adjust SSL/TLS options
-    const agent = new https.Agent({
-      rejectUnauthorized: false, // Temporary workaround, do not use in production
-      secureProtocol: 'TLSv1_method', // Adjust based on server requirements
-      ciphers: 'ALL', // Add more secure cipher suites if needed
-    });
-
-    const response = await axios.post(url, encodedToken, { headers, httpsAgent: agent });
-
-    console.log('API Response:', response.data);
+    const decryptedAndVerified = await jweVerifyAndDecrypt(publicKeyString, privateKeyString, encryptedAndSigned);
+    console.log('Decrypted and Verified:', decryptedAndVerified);
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error(error);
   }
-}
-
-run();
+})();

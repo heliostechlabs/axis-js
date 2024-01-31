@@ -1,3 +1,8 @@
+const jose = require('node-jose');
+const { randomBytes } = require('crypto');
+const fs = require('fs');
+
+
 async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   const keyStore = jose.JWK.createKeyStore();
   const jwk = await keyStore.add(publicKey, 'pem');

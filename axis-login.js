@@ -1,6 +1,3 @@
-const jose = require('node-jose');
-const { randomBytes } = require('crypto');
-
 async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   const keyStore = jose.JWK.createKeyStore();
   const jwk = await keyStore.add(publicKey, 'pem');
@@ -9,7 +6,7 @@ async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   const cek = randomBytes(32); // Adjust the key size according to your requirements
 
   const jwe = await jose.JWE.createEncrypt(
-    { format: 'general', fields: { alg, enc: contentKeyEncMethod } },
+    { fields: { alg, enc: contentKeyEncMethod } }, // Remove 'format' since 'general' is the default
     jwk,
     payload
   );
@@ -18,6 +15,17 @@ async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   
   const jweString = await jwe.final();
   return jweString;
+}
+
+
+async function jweDecrypt(privateKey, jweEncryptedPayload) {
+  const keyStore = jose.JWK.createKeyStore();
+  const jwk = await keyStore.add(privateKey, 'pem');
+  
+  const jwe = await jose.JWE.createDecrypt(jwk, { format: 'compact' }, jweEncryptedPayload);
+  const decryptedValue = await jwe.final();
+  
+  return decryptedValue;
 }
 
 async function jweDecrypt(privateKey, jweEncryptedPayload) {
@@ -30,15 +38,6 @@ async function jweDecrypt(privateKey, jweEncryptedPayload) {
   return decryptedValue;
 }
 
-async function jwsSign(privateKey, payloadToSign) {
-  const keyStore = jose.JWK.createKeyStore();
-  const jwk = await keyStore.add(privateKey, 'pem');
-  
-  const jws = await jose.JWS.createSign({ format: 'compact' }, jwk, payloadToSign);
-  const jwsString = await jws.final();
-  
-  return jwsString;
-}
 
 async function jwsSignatureVerify(publicKey, signedPayloadToVerify) {
   const keyStore = jose.JWK.createKeyStore();

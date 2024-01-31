@@ -1,12 +1,19 @@
 const jose = require('node-jose');
-const fs = require('fs');
+const { randomBytes } = require('crypto');
 
 async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   const keyStore = jose.JWK.createKeyStore();
   const jwk = await keyStore.add(publicKey, 'pem');
-  const cek = await jose.JWA.generateCEK(contentKeyEncMethod);
+
+  // Generate a random Content Encryption Key (CEK)
+  const cek = randomBytes(32); // Adjust the key size according to your requirements
+
+  const jwe = await jose.JWE.createEncrypt(
+    { format: 'compact', fields: { alg, enc: contentKeyEncMethod } },
+    jwk,
+    payload
+  );
   
-  const jwe = await jose.JWE.createEncrypt({ format: 'compact', fields: { alg, enc: contentKeyEncMethod } }, jwk, payload);
   await jwe.update(cek);
   
   const jweString = await jwe.final();

@@ -10,7 +10,7 @@ async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   const cek = randomBytes(32); // Adjust the key size according to your requirements
 
   const jwe = await jose.JWE.createEncrypt(
-    { fields: { alg, enc: contentKeyEncMethod } },
+    { alg, enc: contentKeyEncMethod },
     jwk,
     payload
   );
@@ -20,6 +20,7 @@ async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   const jweString = await jwe.final();
   return jweString;
 }
+
 
 async function jwsSign(privateKey, payloadToSign) {
   const keyStore = jose.JWK.createKeyStore();

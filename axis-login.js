@@ -9,15 +9,19 @@ async function jweEncrypt(alg, contentKeyEncMethod, publicKey, payload) {
   // Generate a random Content Encryption Key (CEK)
   const cek = randomBytes(32); // Adjust the key size according to your requirements
 
-  const options = {
+  // Ensure payload is a Buffer
+  const payloadBuffer = Buffer.from(payload);
+
+  // Use jose.JWE.createEncrypt directly
+  const jwe = await jose.JWE.createEncrypt({
+    format: 'compact',
     contentAlg: alg,
     fields: { enc: contentKeyEncMethod, kid: jwk.kid },
-  };
-
-  const jwe = await jose.JWE.createEncrypt(options, jwk, payload);
+  }, jwk, payloadBuffer);
 
   return jwe;
 }
+
 
 
 

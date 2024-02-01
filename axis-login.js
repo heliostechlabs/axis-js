@@ -55,11 +55,18 @@ async function jweEncryptAndSign(publicKeyToEncrypt, privateKeyToSign, payloadTo
   const alg = 'RSA-OAEP-256';
   const enc = 'A256GCM';
 
-  const encryptedResult = await jweEncrypt(alg, enc, publicKeyToEncrypt, payloadToEncryptAndSign);
-  const jwsSignature = await jwsSign(privateKeyToSign, encryptedResult);
+  // Step 1: Encrypt the payload
+  const encryptedPayload = await jweEncrypt(alg, enc, publicKeyToEncrypt, payloadToEncryptAndSign);
 
-  return encryptedResult + '.' + jwsSignature;
+  // Step 2: Create a JWS (JSON Web Signature) for the entire JWE token
+  const jwsSignature = await jwsSign(privateKeyToSign, encryptedPayload);
+
+  // Combine the encrypted payload and JWS signature
+  const encryptedAndSigned = encryptedPayload + '.' + jwsSignature;
+
+  return encryptedAndSigned;
 }
+
 
 async function jweVerifyAndDecrypt(publicKeyToVerify, privateKeyToDecrypt, payloadToVerifyAndDecrypt) {
   const parts = payloadToVerifyAndDecrypt.split('.');

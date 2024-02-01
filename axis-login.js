@@ -55,18 +55,22 @@ async function jweEncryptAndSign(publicKeyToEncrypt, privateKeyToSign, payloadTo
   const enc = 'A256GCM';
 
   const encryptedResult = await jweEncrypt(alg, enc, publicKeyToEncrypt, payloadToEncryptAndSign);
-  const signedResult = await jwsSign(privateKeyToSign, encryptedResult);
+  const jwsSignature = await jwsSign(privateKeyToSign, encryptedResult);
 
-  return signedResult;
+  return encryptedResult + '.' + jwsSignature;
 }
 
 async function jweVerifyAndDecrypt(publicKeyToVerify, privateKeyToDecrypt, payloadToVerifyAndDecrypt) {
-  const jwVerifyObject = await jwsSignatureVerify(publicKeyToVerify, payloadToVerifyAndDecrypt);
+  const parts = payloadToVerifyAndDecrypt.split('.');
+  const jweEncryptedPayload = parts.slice(0, -1).join('.');
+  const jwsSignature = parts.pop();
+
+  const jwVerifyObject = await jwsSignatureVerify(publicKeyToVerify, jwsSignature);
 
   if (!jwVerifyObject.signatureValid) {
     return null;
   } else {
-    return await jweDecrypt(privateKeyToDecrypt, jwVerifyObject.payloadAfterVerification);
+    return await jweDecrypt(privateKeyToDecrypt, jweEncryptedPayload);
   }
 }
 
